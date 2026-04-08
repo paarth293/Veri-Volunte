@@ -39,6 +39,28 @@ const registerUser = async (req, res) => {
   }
 };
 
+// @desc    Get the currently logged-in user's profile
+// @route   GET /api/users/me
+// @access  Private
+const getMyProfile = async (req, res) => {
+  try {
+    const { uid } = req.user;
+
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User profile not found. Please register first.' });
+    }
+
+    res.status(200).json({ user: userDoc.data() });
+
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+};
+
 module.exports = {
-  registerUser
+  registerUser,
+  getMyProfile
 };
