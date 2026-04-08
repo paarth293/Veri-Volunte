@@ -55,6 +55,26 @@ const getAllEvents = async (req, res) => {
   }
 };
 
+// @desc    Get a single event by its ID
+// @route   GET /api/events/:id
+// @access  Public
+const getEventById = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const eventDoc = await db.collection('events').doc(eventId).get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    res.status(200).json({ id: eventDoc.id, ...eventDoc.data() });
+
+  } catch (error) {
+    console.error('Error fetching event by ID:', error);
+    res.status(500).json({ error: 'Failed to retrieve event' });
+  }
+};
+
 // @desc    Register a volunteer for an event
 // @route   POST /api/events/:id/participate
 // @access  Private
@@ -98,5 +118,6 @@ const participateInEvent = async (req, res) => {
 module.exports = {
   createEvent,
   getAllEvents,
+  getEventById,
   participateInEvent
 };
