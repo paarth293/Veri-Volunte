@@ -9,7 +9,7 @@ const registerUser = async (req, res) => {
         const assignedRole = role === 'NGO' ? 'NGO' : 'Volunteer';
 
         const userRef = db.collection('users').doc(uid);
-        const userDoc = await useRef.get();
+        const userDoc = await userRef.get();
 
         if(userDoc.exists) {
             return res.status(200).json({
