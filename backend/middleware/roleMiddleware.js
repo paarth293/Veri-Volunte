@@ -17,6 +17,8 @@ const isNGO = async (req, res, next) => {
       });
     }
 
+    const userData = userDoc.data();
+
     if (userData.role !== 'NGO') {
       return res.status(403).json({ 
         error: 'Forbidden: Only verified NGOs can perform this action' 
