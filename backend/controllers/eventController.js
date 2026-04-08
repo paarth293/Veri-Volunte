@@ -115,9 +115,36 @@ const participateInEvent = async (req, res) => {
   }
 };
 
+// @desc    Get all events created by the currently logged-in NGO
+// @route   GET /api/events/my-events
+// @access  Private (NGO Only)
+const getMyEvents = async (req, res) => {
+  try {
+    const { uid } = req.user;
+
+    const eventsSnapshot = await db
+      .collection('events')
+      .where('createdBy', '==', uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const events = [];
+    eventsSnapshot.forEach(doc => {
+      events.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.status(200).json(events);
+
+  } catch (error) {
+    console.error('Error fetching NGO events:', error);
+    res.status(500).json({ error: 'Failed to retrieve your events' });
+  }
+};
+
 module.exports = {
   createEvent,
   getAllEvents,
   getEventById,
+  getMyEvents,
   participateInEvent
 };

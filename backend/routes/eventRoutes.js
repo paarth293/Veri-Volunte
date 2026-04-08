@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
-const { createEvent, getAllEvents, getEventById, participateInEvent } = require('../controllers/eventController');
+const { createEvent, getAllEvents, getEventById, getMyEvents, participateInEvent } = require('../controllers/eventController');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { isNGO } = require('../middleware/roleMiddleware');
 
 // Route: GET /api/events
 router.get('/', getAllEvents);
+
+// Route: GET /api/events/my-events (MUST be before /:id to avoid routing conflict)
+router.get('/my-events', verifyToken, isNGO, getMyEvents);
 
 // Route: GET /api/events/:id
 router.get('/:id', getEventById);
