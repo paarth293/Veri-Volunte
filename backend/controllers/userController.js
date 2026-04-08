@@ -60,7 +60,35 @@ const getMyProfile = async (req, res) => {
   }
 };
 
+// @desc    Get all events a volunteer has signed up for
+// @route   GET /api/users/me/events
+// @access  Private
+const getMyParticipatedEvents = async (req, res) => {
+  try {
+    const { uid } = req.user;
+
+    // Query the events collection for any event containing the user's uid in the participants array
+    const eventsSnapshot = await db
+      .collection('events')
+      .where('participants', 'array-contains', uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const events = [];
+    eventsSnapshot.forEach(doc => {
+      events.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.status(200).json(events);
+
+  } catch (error) {
+    console.error('Error fetching participated events:', error);
+    res.status(500).json({ error: 'Failed to retrieve your participated events' });
+  }
+};
+
 module.exports = {
   registerUser,
-  getMyProfile
+  getMyProfile,
+  getMyParticipatedEvents
 };
