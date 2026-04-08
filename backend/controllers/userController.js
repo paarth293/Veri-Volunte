@@ -18,8 +18,27 @@ const registerUser = async (req, res) => {
             });
         }
 
-        
+        const newUserProfile = {
+            uid,
+            email,
+            name: name || '',
+            role: assignedRole,
+            createdAt: new Date().toISOString()
+    };
 
-        
-    }
-}
+    await userRef.set(newUserProfile);
+
+    res.status(201).json({
+      message: 'User successfully created in database!',
+      user: newUserProfile
+    });
+
+  } catch (error) {
+    console.error('Error during user registration:', error);
+    res.status(500).json({ error: 'Failed to register user to database' });
+  }
+};
+
+module.exports = {
+  registerUser
+};
