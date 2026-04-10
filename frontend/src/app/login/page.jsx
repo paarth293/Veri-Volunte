@@ -1,254 +1,144 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
-import { FcGoogle } from 'react-icons/fc';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { registerUser } from '@/lib/api';
-import Modal from '@/components/ui/Modal';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import toast from 'react-hot-toast';
 import styles from './page.module.css';
 
+const ROLES = [
+  {
+    id: 'Volunteer',
+    emoji: '🤝',
+    label: 'Volunteer',
+    desc: 'Find events & make an impact',
+  },
+  {
+    id: 'NGO',
+    emoji: '🏛️',
+    label: 'NGO',
+    desc: 'Post events & find volunteers',
+  },
+];
+
 export default function LoginPage() {
-  const { user, profile, loading: authLoading, signInWithGoogle, refreshProfile } = useAuth();
+  const { user, profile, loading, completeSignIn } = useAuth();
   const router = useRouter();
 
-  // Handle auto-routing for halfway-registered users
+  const [selectedRole, setSelectedRole] = useState('Volunteer');
+  const [signingIn, setSigningIn]       = useState(false);
+
+  // Redirect if already authenticated
   useEffect(() => {
-    if (!authLoading && user && profile) {
-      router.push('/dashboard');
-    } else if (!authLoading && user && !profile) {
-      setProfileData((prev) => ({ ...prev, name: user.displayName || '' }));
-      setShowRoleModal(true);
-      setStep(1);
+    if (!loading && user && profile) {
+      router.replace('/dashboard');
     }
-  }, [user, profile, authLoading, router]);
-
-  const [loading, setLoading] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [step, setStep] = useState(1);
-  const [intendedRole, setIntendedRole] = useState('Volunteer');
-  const [profileData, setProfileData] = useState({
-    name: '',
-    role: 'Volunteer',
-    skills: '',
-    bio: '',
-    location: '',
-    availability: '',
-    orgName: '',
-    registrationNumber: '',
-    website: '',
-    contactPhone: '',
-    focusAreas: ''
-  });
-  const [registering, setRegistering] = useState(false);
-
-  const handleProfileChange = (e) => {
-    setProfileData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  }, [user, profile, loading, router]);
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
+    if (!selectedRole) {
+      toast.error('Please select a role first.');
+      return;
+    }
+    setSigningIn(true);
     try {
-      const firebaseUser = await signInWithGoogle();
-      // Try to get existing profile
-      try {
-        const { getMyProfile } = await import('@/lib/api');
-        await getMyProfile();
-        // Profile exists → go to dashboard
-        toast.success('Welcome back!');
-        router.push('/dashboard');
-      } catch {
-        // No profile → show role selection modal
-        setProfileData((prev) => ({ ...prev, name: firebaseUser.displayName || '', role: intendedRole }));
-        setShowRoleModal(true);
-        setStep(1);
-      }
+      const result = await signInWithPopup(auth, googleProvider);
+      await completeSignIn(result.user, selectedRole);
+      toast.success(`Welcome to VeriVolunte!`);
+      router.replace('/dashboard');
     } catch (err) {
-      toast.error('Sign-in failed. Please try again.');
+      console.error(err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        toast.error('Sign-in failed. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      setSigningIn(false);
     }
   };
 
-  const handleRegister = async () => {
-    setRegistering(true);
-    try {
-      await registerUser(profileData);
-      await refreshProfile();
-      toast.success(`Welcome to VeriVolunte, ${profileData.name}!`);
-      setShowRoleModal(false);
-      router.push('/dashboard');
-    } catch (err) {
-      toast.error('Registration failed. Please try again.');
-    } finally {
-      setRegistering(false);
-    }
-  };
+  if (loading) return (
+    <div className={styles.fullCenter}>
+      <div className={styles.spinner} />
+    </div>
+  );
 
   return (
     <div className={styles.page}>
-      <div className={styles.blob1} aria-hidden="true" />
-      <div className={styles.blob2} aria-hidden="true" />
+      <div className={styles.card}>
+        {/* Logo */}
+        <div className={styles.logo}>
+          <span className={styles.logoIcon}>🌿</span>
+          <span className={styles.logoText}>VeriVolunte</span>
+        </div>
 
-      <motion.div
-        className={styles.card}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className={styles.top}>
-          <span className={styles.logoMark}>🌿</span>
-          <h1 className={styles.title}>Welcome to VeriVolunte</h1>
+        {/* Headline */}
+        <div className={styles.headline}>
+          <h1 className={styles.title}>Welcome back</h1>
           <p className={styles.sub}>Sign in to discover events and make an impact</p>
         </div>
 
-        <div className={styles.divider}>
-          <span>Select your role to sign in or register</span>
+        {/* Role selector */}
+        <div className={styles.roleSection}>
+          <p className={styles.roleLabel}>I am joining as a</p>
+          <div className={styles.roleGrid}>
+            {ROLES.map((role) => (
+              <button
+                key={role.id}
+                className={[styles.roleCard, selectedRole === role.id ? styles.roleCardActive : ''].join(' ')}
+                onClick={() => setSelectedRole(role.id)}
+                type="button"
+              >
+                <span className={styles.roleEmoji}>{role.emoji}</span>
+                <span className={styles.roleName}>{role.label}</span>
+                <span className={styles.roleDesc}>{role.desc}</span>
+                {selectedRole === role.id && (
+                  <span className={styles.roleCheck}>✓</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-          <button
-            className={styles.googleBtn}
-            style={{ 
-              flex: 1, 
-              border: intendedRole === 'Volunteer' ? '2px solid var(--primary)' : '1px solid var(--border)',
-              background: intendedRole === 'Volunteer' ? 'var(--primary-light)' : 'transparent'
-            }}
-            onClick={() => setIntendedRole('Volunteer')}
-            disabled={loading}
-          >
-            🙋 Volunteer
-          </button>
-          <button
-            className={styles.googleBtn}
-            style={{ 
-              flex: 1, 
-              border: intendedRole === 'NGO' ? '2px solid var(--secondary)' : '1px solid var(--border)',
-              background: intendedRole === 'NGO' ? 'var(--secondary-light)' : 'transparent'
-            }}
-            onClick={() => setIntendedRole('NGO')}
-            disabled={loading}
-          >
-            🏛️ NGO
-          </button>
-        </div>
+        {/* Divider */}
+        <div className={styles.divider} />
 
+        {/* Google Sign-In */}
         <button
           className={styles.googleBtn}
           onClick={handleGoogleSignIn}
-          disabled={loading}
-          id="google-signin-btn"
-          style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+          disabled={signingIn}
+          type="button"
         >
-          <FcGoogle size={22} />
-          {loading ? 'Signing in...' : `Continue as ${intendedRole} with Google`}
+          {signingIn ? (
+            <span className={styles.btnSpinner} />
+          ) : (
+            <GoogleIcon />
+          )}
+          <span>
+            {signingIn
+              ? 'Signing in…'
+              : `Continue as ${selectedRole} with Google`}
+          </span>
         </button>
 
-        <p className={styles.terms}>
-          By signing in, you agree to volunteer thoughtfully and contribute positively to your community.
+        {/* Footer note */}
+        <p className={styles.footerNote}>
+          By signing in, you agree to volunteer thoughtfully and contribute
+          positively to your community.
         </p>
-      </motion.div>
-
-      {/* Role Selection Modal */}
-      <Modal isOpen={showRoleModal} onClose={() => setShowRoleModal(false)} title="Complete Your Profile">
-        <div className={styles.roleModal}>
-          {step === 1 && (
-            <>
-              <p className={styles.roleDesc}>
-                Tell us a bit about yourself so we can personalize your experience.
-              </p>
-
-              <Input
-                label="Your Name"
-                id="reg-name"
-                name="name"
-                value={profileData.name}
-                onChange={handleProfileChange}
-                placeholder="Enter your full name"
-              />
-
-              <div className={styles.roleSelect}>
-                <p className={styles.roleLabel}>I am joining as:</p>
-                <div className={styles.roleOptions}>
-                  {['Volunteer', 'NGO'].map((r) => (
-                    <button
-                      key={r}
-                      className={[styles.roleOption, profileData.role === r ? styles.selected : ''].join(' ')}
-                      onClick={() => setProfileData((prev) => ({ ...prev, role: r }))}
-                      id={`role-option-${r.toLowerCase()}`}
-                    >
-                      <span className={styles.roleIcon}>{r === 'Volunteer' ? '🙋' : '🏛️'}</span>
-                      <span className={styles.roleName}>{r}</span>
-                      <span className={styles.roleHint}>
-                        {r === 'Volunteer' ? 'Browse & join events' : 'Create & manage events'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Button 
-                onClick={() => {
-                  if (!profileData.name.trim()) {
-                    toast.error('Please enter your name.');
-                    return;
-                  }
-                  setStep(2);
-                }} 
-                fullWidth 
-                id="next-step-btn"
-              >
-                Next
-              </Button>
-            </>
-          )}
-
-          {step === 2 && profileData.role === 'Volunteer' && (
-            <div className={styles.stepTwoForm}>
-              <p className={styles.roleDesc}>Tell us more about your volunteering preferences.</p>
-              <Input label="Skills" name="skills" value={profileData.skills} onChange={handleProfileChange} placeholder="e.g. Teaching, First Aid" />
-              <Input label="Location (City)" name="location" value={profileData.location} onChange={handleProfileChange} placeholder="e.g. Mumbai" />
-              <Input label="Availability" name="availability" value={profileData.availability} onChange={handleProfileChange} placeholder="e.g. Weekends" />
-              <div className={styles.fieldWrapper} style={{ marginBottom: '1rem' }}>
-                <label className={styles.label} style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-main)' }}>Bio / About Me</label>
-                <textarea
-                  name="bio"
-                  value={profileData.bio}
-                  onChange={handleProfileChange}
-                  placeholder="A short bio"
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-main)', minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
-                />
-              </div>
-              
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <Button type="button" variant="ghost" onClick={() => setStep(1)} id="back-step-btn">Back</Button>
-                <Button onClick={handleRegister} loading={registering} fullWidth id="complete-registration-btn">Complete Registration</Button>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && profileData.role === 'NGO' && (
-            <div className={styles.stepTwoForm}>
-              <p className={styles.roleDesc}>Please provide your Organization details for verification.</p>
-              <Input label="Organization Name" name="orgName" value={profileData.orgName} onChange={handleProfileChange} placeholder="Official Name" />
-              <Input label="Registration / ID Number" name="registrationNumber" value={profileData.registrationNumber} onChange={handleProfileChange} placeholder="Govt Reg No." />
-              <Input label="Focus Areas" name="focusAreas" value={profileData.focusAreas} onChange={handleProfileChange} placeholder="e.g. Education, Environment" />
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                 <div style={{ flex: 1 }}><Input label="Contact Phone" name="contactPhone" value={profileData.contactPhone} onChange={handleProfileChange} placeholder="Phone" /></div>
-                 <div style={{ flex: 1 }}><Input label="Website" name="website" value={profileData.website} onChange={handleProfileChange} placeholder="URL" /></div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <Button type="button" variant="ghost" onClick={() => setStep(1)} id="back-step-btn">Back</Button>
-                <Button onClick={handleRegister} loading={registering} fullWidth id="complete-registration-btn">Complete Registration</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
+      </div>
     </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
   );
 }
