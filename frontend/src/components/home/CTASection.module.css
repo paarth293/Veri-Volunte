@@ -1,0 +1,93 @@
+.section { padding: 96px 24px; }
+
+.container { max-width: 1200px; margin: 0 auto; }
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  padding: 72px 48px;
+  text-align: center;
+}
+
+.bg1 {
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  pointer-events: none;
+}
+
+.bg2 {
+  position: absolute;
+  bottom: -80px; left: -40px;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.emoji { font-size: 2.5rem; }
+
+.title {
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sub {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.82);
+  max-width: 520px;
+}
+
+.buttons {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.btn {
+  background: #fff;
+  color: var(--color-primary);
+  padding: 13px 30px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); color: var(--color-primary-hover); }
+
+.btnOutline {
+  background: transparent;
+  color: #fff;
+  padding: 12px 30px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border: 2px solid rgba(255,255,255,0.6);
+  transition: all var(--transition-base);
+}
+.btnOutline:hover { background: rgba(255,255,255,0.12); border-color: #fff; color: #fff; transform: translateY(-2px); }
+
+@media (max-width: 600px) { .card { padding: 48px 24px; } }
