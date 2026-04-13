@@ -10,6 +10,7 @@ import { formatDate, formatDateTime } from '@/utils/formatDate';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { SkeletonLine } from '@/components/ui/Skeleton';
+import EventRegistrationModal from '@/components/events/EventRegistrationModal';
 import styles from './page.module.css';
 
 export default function EventDetailPage() {
@@ -18,7 +19,7 @@ export default function EventDetailPage() {
   const { user, profile } = useAuth();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     getEventById(id)
@@ -31,18 +32,18 @@ export default function EventDetailPage() {
   const isFull = event?.maxParticipants > 0 && event?.participants?.length >= event?.maxParticipants;
   const isNGO = profile?.role === 'NGO';
 
-  const handleParticipate = async () => {
+  const handleParticipate = async (message) => {
     if (!user) { router.push('/login'); return; }
-    setJoining(true);
     try {
-      await participateInEvent(id);
-      toast.success('You\'re signed up! 🎉');
-      const updated = await getEventById(id);
-      setEvent(updated);
+      await participateInEvent(id, message);
+      // Wait a moment for modal success animation before updating local state
+      setTimeout(async () => {
+        const updated = await getEventById(id);
+        setEvent(updated);
+      }, 2000);
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Could not join this event.');
-    } finally {
-      setJoining(false);
+      throw err;
     }
   };
 
@@ -175,8 +176,7 @@ export default function EventDetailPage() {
                 <Button disabled fullWidth variant="ghost">Event is Full</Button>
               ) : (
                 <Button
-                  onClick={handleParticipate}
-                  loading={joining}
+                  onClick={() => setShowModal(true)}
                   fullWidth
                   id="event-participate-btn"
                 >
@@ -187,6 +187,16 @@ export default function EventDetailPage() {
           </div>
         </div>
       </div>
+      
+      {event && (
+        <EventRegistrationModal
+          open={showModal}
+          event={event}
+          profile={profile}
+          onClose={() => setShowModal(false)}
+          onConfirm={handleParticipate}
+        />
+      )}
     </div>
   );
 }
