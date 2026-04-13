@@ -82,6 +82,7 @@ const participateInEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const { uid } = req.user;
+    const { message } = req.body; // Optional message from volunteer
 
     const eventRef = db.collection('events').doc(eventId);
     const eventDoc = await eventRef.get();
@@ -102,10 +103,21 @@ const participateInEvent = async (req, res) => {
       return res.status(400).json({ error: 'You are already registered for this event!' });
     }
 
-    // 3. Atomically add the user to the participants array
+    // 3. Atomically add the user to the participants array (quick lookup)
     await eventRef.update({
       participants: admin.firestore.FieldValue.arrayUnion(uid)
     });
+
+    // 4. Store detailed participation record in sub-collection
+    const participationRecord = {
+      uid,
+      registeredAt: new Date().toISOString(),
+    };
+    if (message && message.trim()) {
+      participationRecord.message = message.trim();
+    }
+
+    await eventRef.collection('participations').doc(uid).set(participationRecord);
 
     res.status(200).json({ message: 'Successfully signed up for the event!' });
 
