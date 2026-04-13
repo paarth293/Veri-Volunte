@@ -54,8 +54,10 @@ export const createEvent = async (eventData) => {
   return data;
 };
 
-export const participateInEvent = async (id) => {
+export const participateInEvent = async (id, message = '') => {
   const config = await authHeaders();
-  const { data } = await axios.post(`${BASE_URL}/api/events/${id}/participate`, {}, config);
+  const body = {};
+  if (message && message.trim()) body.message = message.trim();
+  const { data } = await axios.post(`${BASE_URL}/api/events/${id}/participate`, body, config);
   return data;
 };
