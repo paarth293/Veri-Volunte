@@ -1,4 +1,5 @@
 const { db, admin } = require('../config/firebase');
+const { geocodeLocation } = require('./needController');   // Reuse the improved geocode function
 
 // @desc    Create a new volunteering event
 // @route   POST /api/events
@@ -8,8 +9,13 @@ const createEvent = async (req, res) => {
     const { title, description, date, location, maxParticipants } = req.body;
     
     if (!title || !description || !date || !location) {
-      return res.status(400).json({ error: 'Please provide all required fields (title, description, date, location)' });
+      return res.status(400).json({ 
+        error: 'Please provide all required fields (title, description, date, location)' 
+      });
     }
+
+    // Geocode the user-entered location (Delhi-focused)
+    const coords = await geocodeLocation(location);
 
     const newEvent = {
       title,
@@ -19,7 +25,9 @@ const createEvent = async (req, res) => {
       maxParticipants: maxParticipants ? parseInt(maxParticipants) : 0, 
       createdBy: req.user.uid,
       participants: [], 
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      lat: coords.lat,           // ← Saved for Map
+      lng: coords.lng            // ← Saved for Map
     };
 
     const eventRef = await db.collection('events').add(newEvent);
@@ -38,7 +46,7 @@ const createEvent = async (req, res) => {
 
 // @desc    Fetch all upcoming events
 // @route   GET /api/events
-// @access  Public (Anyone can see what events exist)
+// @access  Public
 const getAllEvents = async (req, res) => {
   try {
     const eventsSnapshot = await db.collection('events').orderBy('createdAt', 'desc').get();
@@ -82,6 +90,7 @@ const participateInEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const { uid } = req.user;
+    const { message } = req.body;
 
     const eventRef = db.collection('events').doc(eventId);
     const eventDoc = await eventRef.get();
@@ -92,20 +101,31 @@ const participateInEvent = async (req, res) => {
 
     const eventData = eventDoc.data();
 
-    // 1. Check if the event is fully booked
+    // Check if event is full
     if (eventData.maxParticipants > 0 && eventData.participants.length >= eventData.maxParticipants) {
-      return res.status(400).json({ error: 'This event is currently full and not accepting more volunteers.' });
+      return res.status(400).json({ error: 'This event is currently full.' });
     }
 
-    // 2. Check if the user is already signed up
+    // Check if already registered
     if (eventData.participants.includes(uid)) {
       return res.status(400).json({ error: 'You are already registered for this event!' });
     }
 
-    // 3. Atomically add the user to the participants array
+    // Add to participants array
     await eventRef.update({
       participants: admin.firestore.FieldValue.arrayUnion(uid)
     });
+
+    // Store detailed participation record
+    const participationRecord = {
+      uid,
+      registeredAt: new Date().toISOString(),
+    };
+    if (message && message.trim()) {
+      participationRecord.message = message.trim();
+    }
+
+    await eventRef.collection('participations').doc(uid).set(participationRecord);
 
     res.status(200).json({ message: 'Successfully signed up for the event!' });
 
@@ -125,13 +145,15 @@ const getMyEvents = async (req, res) => {
     const eventsSnapshot = await db
       .collection('events')
       .where('createdBy', '==', uid)
-      .orderBy('createdAt', 'desc')
       .get();
 
     const events = [];
     eventsSnapshot.forEach(doc => {
       events.push({ id: doc.id, ...doc.data() });
     });
+
+    // Sort in memory
+    events.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json(events);
 

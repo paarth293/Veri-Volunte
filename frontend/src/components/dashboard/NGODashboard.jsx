@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { HiCalendar, HiMapPin, HiUsers, HiPlusCircle, HiChevronRight } from 'react-icons/hi2';
+import { HiCalendar, HiMapPin, HiUsers, HiPlusCircle, HiChevronRight, HiCheckCircle } from 'react-icons/hi2';
 import { getMyEvents } from '@/lib/api';
 import { formatDate } from '@/utils/formatDate';
 import { SkeletonGrid } from '@/components/ui/Skeleton';
@@ -38,12 +38,76 @@ export default function NGODashboard({ profile }) {
           <div className={styles.welcomeText}>
             <h2 className={styles.welcomeTitle}>
               Welcome back, <span className={styles.welcomeName}>{profile?.orgName || profile?.name || 'NGO'}!</span>
+              {profile?.isVerified && (
+                <HiCheckCircle 
+                  style={{ display: 'inline', color: '#16a34a', marginLeft: '8px', verticalAlign: 'middle', transform: 'translateY(-2px)' }} 
+                  size={26}
+                  title="Verified Organization" 
+                />
+              )}
             </h2>
             <p className={styles.welcomeSub}>Manage your events and connect with verified volunteers.</p>
           </div>
           <Link href="/dashboard/create-event" className={styles.createBtn} id="ngo-create-event-btn">
             <HiPlusCircle size={18} />
             <span>Create Event</span>
+          </Link>
+        </div>
+      </motion.div>
+
+      {/* Quick Actions (Features 1, 2, 3) */}
+      <motion.div
+        className={styles.quickActions}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.05 }}
+      >
+        <h3 className={styles.sectionTitle}>Platform Tools</h3>
+        <div className={styles.quickGrid}>
+          {/* Feature 1 */}
+          <Link href="/dashboard/extract-need" className={styles.quickCard}>
+            <div className={styles.qIcon} style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#b45309' }}>🤖</div>
+            <div className={styles.qText}>
+              <h4>Extract Need (AI)</h4>
+              <p>Turn messages/images into structured needs</p>
+            </div>
+            <HiChevronRight className={styles.qArrow} />
+          </Link>
+          {/* Feature 2 */}
+          <Link href="/dashboard/match-volunteers" className={styles.quickCard}>
+            <div className={styles.qIcon} style={{ background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', color: '#16a34a' }}>⚡</div>
+            <div className={styles.qText}>
+              <h4>Smart Match Engine</h4>
+              <p>Find the best volunteers for open needs</p>
+            </div>
+            <HiChevronRight className={styles.qArrow} />
+          </Link>
+          {/* Feature 3 */}
+          <Link href="/dashboard/needs-map" className={styles.quickCard}>
+            <div className={styles.qIcon} style={{ background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)', color: '#1e40af' }}>🗺️</div>
+            <div className={styles.qText}>
+              <h4>Live Needs Map</h4>
+              <p>Visualize extracted needs geographically</p>
+            </div>
+            <HiChevronRight className={styles.qArrow} />
+          </Link>
+          {/* Feature 4 */}
+          <Link href="/dashboard/verify-certificate" className={styles.quickCard}>
+            <div className={styles.qIcon} style={{ background: 'linear-gradient(135deg, #f0fdf4, #bbf7d0)', color: '#16a34a' }}>🛡️</div>
+            <div className={styles.qText}>
+              <h4>Verify Certificates</h4>
+              <p>AI-powered credential verification &amp; trust badges</p>
+            </div>
+            <HiChevronRight className={styles.qArrow} />
+          </Link>
+          {/* Feature 6: Cross-NGO Trust */}
+          <Link href="/dashboard/trust-lookup" className={styles.quickCard}>
+            <div className={styles.qIcon} style={{ background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', color: '#7c3aed' }}>🤝</div>
+            <div className={styles.qText}>
+              <h4>Cross-NGO Trust Lookup</h4>
+              <p>Instantly verify volunteers trusted by other NGOs</p>
+            </div>
+            <HiChevronRight className={styles.qArrow} />
           </Link>
         </div>
       </motion.div>

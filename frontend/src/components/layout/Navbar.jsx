@@ -10,6 +10,7 @@ import styles from './Navbar.module.css';
 
 const NAV_LINKS = [
   { href: '/events', label: 'Browse Events' },
+  { href: '/map', label: 'Delhi Map' },           // You can change label if you want
   { href: '/dashboard', label: 'Dashboard', requiresAuth: true },
 ];
 

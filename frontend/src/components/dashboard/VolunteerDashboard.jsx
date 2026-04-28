@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { HiCalendar, HiMapPin, HiChevronRight } from 'react-icons/hi2';
+import { HiCalendar, HiMapPin, HiChevronRight, HiCheckCircle } from 'react-icons/hi2';
 import { getMyParticipatedEvents } from '@/lib/api';
 import { formatDate } from '@/utils/formatDate';
 import Badge from '@/components/ui/Badge';
@@ -45,6 +45,13 @@ export default function VolunteerDashboard({ profile }) {
           <div className={styles.welcomeText}>
             <h2 className={styles.welcomeTitle}>
               Welcome, <span className={styles.welcomeName}>{profile?.name || 'Volunteer'}!</span>
+              {profile?.isVerified && (
+                <HiCheckCircle 
+                  style={{ display: 'inline', color: '#16a34a', marginLeft: '8px', verticalAlign: 'middle', transform: 'translateY(-2px)' }} 
+                  size={26}
+                  title="Verified Volunteer" 
+                />
+              )}
             </h2>
             <p className={styles.welcomeSub}>Track your volunteering journey and find new opportunities.</p>
           </div>
@@ -144,6 +151,69 @@ export default function VolunteerDashboard({ profile }) {
           <p>Browse upcoming volunteering events near you.</p>
         </div>
         <Link href="/events" className={styles.ctaBtn}>Explore Events →</Link>
+      </motion.div>
+
+      {/* Verify Certificate CTA + Cross-NGO Trust */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.25 }}
+        style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+      >
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexWrap: 'wrap', gap: '12px',
+          background: profile?.isVerified ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #f8faff, #eff6ff)',
+          border: `1px solid ${profile?.isVerified ? '#bbf7d0' : '#c7d7f9'}`,
+          borderRadius: '14px', padding: '18px 22px',
+        }}>
+          <div>
+            <strong style={{ color: profile?.isVerified ? '#16a34a' : '#0D2B5E', fontSize: '0.95rem' }}>
+              {profile?.isVerified ? '✅ Your credentials are verified!' : '🛡️ Get your credentials verified'}
+            </strong>
+            <p style={{ margin: '3px 0 0', fontSize: '0.83rem', color: '#666' }}>
+              {profile?.isVerified
+                ? `Verified skill: ${profile.verifiedSkill || 'Certificate on file'} — NGOs trust you instantly`
+                : 'Upload your certificates. AI verifies them in seconds and gives you a trusted badge across all NGOs.'}
+            </p>
+          </div>
+          <Link href="/dashboard/verify-certificate" style={{
+            padding: '9px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem',
+            background: profile?.isVerified ? '#16a34a' : '#0D2B5E', color: 'white',
+            textDecoration: 'none', whiteSpace: 'nowrap',
+          }}>
+            {profile?.isVerified ? 'View Certificates →' : 'Verify Now →'}
+          </Link>
+        </div>
+
+        {/* Cross-NGO Trust card */}
+        <Link href="/dashboard/my-trust" style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexWrap: 'wrap', gap: '12px',
+          background: 'linear-gradient(135deg, #faf5ff, #ede9fe)',
+          border: '1px solid #ddd6fe',
+          borderRadius: '14px', padding: '16px 22px',
+          textDecoration: 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.6rem' }}>🤝</span>
+            <div>
+              <strong style={{ color: '#5b21b6', fontSize: '0.92rem', display: 'block' }}>
+                Cross-NGO Trust Record
+              </strong>
+              <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#7c3aed' }}>
+                See which NGOs have trusted your credentials — no re-verification needed
+              </p>
+            </div>
+          </div>
+          <span style={{
+            padding: '7px 16px', borderRadius: '8px',
+            background: '#7c3aed', color: 'white',
+            fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap',
+          }}>
+            View Trust →
+          </span>
+        </Link>
       </motion.div>
 
       {/* Upcoming events */}

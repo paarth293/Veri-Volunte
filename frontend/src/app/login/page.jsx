@@ -36,6 +36,35 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState('Volunteer');
   const [busy, setBusy]               = useState(false);
 
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setForm(prev => ({ ...prev, lat: latitude, lng: longitude }));
+        // Reverse geocode to get address
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`);
+          const data = await response.json();
+          const address = data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setForm(prev => ({ ...prev, location: address }));
+          toast.success('Location set to your current position.');
+        } catch (error) {
+          console.error('Reverse geocoding failed:', error);
+          setForm(prev => ({ ...prev, location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` }));
+          toast.success('Coordinates set, but address lookup failed.');
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast.error('Unable to get your location. Please enter manually.');
+      }
+    );
+  };
+
   /* ── Signup-only extra fields ──────────────────────────── */
   const [form, setForm] = useState({
     name:               '',
@@ -43,6 +72,8 @@ export default function LoginPage() {
     skills:             [],
     bio:                '',
     location:           '',
+    lat:                null,
+    lng:                null,
     availability:       '',
     // NGO fields
     orgName:            '',
@@ -79,7 +110,7 @@ export default function LoginPage() {
     if (mode === 'signup') {
       if (!form.name.trim()) { toast.error('Please enter your name.'); return false; }
       if (selectedRole === 'Volunteer') {
-        if (!form.location.trim())   { toast.error('Please enter your location.'); return false; }
+        if (!form.location.trim() && (!form.lat || !form.lng))   { toast.error('Please enter your location or use current location.'); return false; }
         if (!form.availability.trim()) { toast.error('Please enter your availability.'); return false; }
       }
       if (selectedRole === 'NGO') {
@@ -122,6 +153,8 @@ export default function LoginPage() {
               skills:       form.skills.join(', '),
               bio:          form.bio,
               location:     form.location,
+              lat:          form.lat,
+              lng:          form.lng,
               availability: form.availability,
             }
           : {
@@ -240,13 +273,31 @@ export default function LoginPage() {
               <>
                 <div className={styles.fieldGroup}>
                   <label className={styles.fieldLabel}>Location *</label>
-                  <input
-                    className={styles.textInput}
-                    type="text"
-                    placeholder="e.g. Sector 5, Delhi"
-                    value={form.location}
-                    onChange={e => updateField('location', e.target.value)}
-                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      className={styles.textInput}
+                      type="text"
+                      placeholder="e.g. Sector 5, Delhi"
+                      value={form.location}
+                      onChange={e => updateField('location', e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      style={{
+                        padding: '8px 12px',
+                        background: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      📍 Use Current
+                    </button>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>

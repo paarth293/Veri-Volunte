@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { HiUser, HiEnvelope, HiShieldCheck, HiCalendar } from 'react-icons/hi2';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +10,96 @@ import { formatDate } from '@/utils/formatDate';
 import Badge from '@/components/ui/Badge';
 import { SkeletonLine } from '@/components/ui/Skeleton';
 import styles from './page.module.css';
+import { uploadCertificate, getMyVerifications } from '@/lib/api';
+
+// Add this component inside the file, before the main export
+function CertificateSection() {
+  const [verifications, setVerifications] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    getMyVerifications()
+      .then(d => setVerifications(d.verifications || []))
+      .catch(() => {});
+  }, []);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('certificate', file);
+      const result = await uploadCertificate(fd);
+      toast.success(result.message);
+      // Refresh list
+      const updated = await getMyVerifications();
+      setVerifications(updated.verifications || []);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const STATUS_COLOR = {
+    verified:       { bg: '#f0fdf4', text: '#16a34a', label: '✅ Verified' },
+    pending_review: { bg: '#fffbeb', text: '#d97706', label: '⏳ Pending Review' },
+    expired:        { bg: '#fef2f2', text: '#dc2626', label: '❌ Expired' },
+  };
+
+  return (
+    <div style={{ marginTop: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>My Certificates</h2>
+        <button
+          onClick={() => fileRef.current.click()}
+          disabled={uploading}
+          style={{
+            padding: '8px 16px', borderRadius: '8px', border: 'none',
+            background: '#0D2B5E', color: 'white', cursor: 'pointer',
+            fontSize: '0.85rem', fontWeight: 600,
+          }}
+        >
+          {uploading ? 'Verifying...' : '+ Upload Certificate'}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleUpload} />
+      </div>
+
+      {verifications.length === 0 && (
+        <p style={{ color: '#888', fontSize: '0.9rem' }}>No certificates uploaded yet.</p>
+      )}
+
+      {verifications.map(v => {
+        const s = STATUS_COLOR[v.status] || STATUS_COLOR.pending_review;
+        return (
+          <div key={v.id} style={{
+            border: '1px solid #e5e7eb', borderRadius: '12px',
+            padding: '1rem', marginBottom: '0.75rem', background: '#fafafa',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <strong>{v.certificate_type}</strong>
+              <span style={{
+                padding: '2px 10px', borderRadius: '20px', fontSize: '0.78rem',
+                background: s.bg, color: s.text, fontWeight: 600,
+              }}>{s.label}</span>
+            </div>
+            <p style={{ margin: '4px 0', color: '#555', fontSize: '0.85rem' }}>
+              Issued by: {v.issuing_organization}
+            </p>
+            <p style={{ margin: 0, color: '#888', fontSize: '0.8rem' }}>
+              Issued: {v.issue_date || 'N/A'} &nbsp;|&nbsp;
+              Expires: {v.expiry_date || 'No expiry'} &nbsp;|&nbsp;
+              AI Confidence: {v.confidence}%
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();
@@ -146,6 +237,19 @@ export default function ProfilePage() {
             </div>
           </Link>
         </motion.div>
+
+        {/* Certificates Card (Volunteers Only) */}
+        {profile?.role !== 'NGO' && (
+          <motion.div
+            className={styles.detailsCard}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.35 }}
+            style={{ marginTop: '1.5rem' }}
+          >
+            <CertificateSection />
+          </motion.div>
+        )}
       </div>
     </div>
   );
